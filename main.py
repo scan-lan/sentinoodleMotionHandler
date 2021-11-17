@@ -1,7 +1,5 @@
 import base64
 import json
-import logging as LOG
-from typing import NewType
 
 import pymysql
 from pymysql.err import OperationalError
@@ -19,8 +17,6 @@ pymysql_config = {
     'cursorclass': pymysql.cursors.DictCursor,
     'autocommit': True
 }
-
-# isession = NewType("Session", Session)
 
 CONNECTION_NAME = 'sentinoodle:europe-west2:sentinoodle-events'
 
@@ -64,7 +60,7 @@ def insert_event_into_table(session_id: int, event_id: str, event_name: str, dat
                 STR_TO_DATE('{date_string[:-1]}000', '%Y-%m-%dT%H:%i:%s.%f'),
         """
     event_insert_query += f"'{room}');" if room else "NULL);"
-    LOG.info(event_insert_query)
+    print(event_insert_query)
 
     ensure_db_connection()
 
@@ -81,7 +77,7 @@ def get_session_info(device_id: str) -> Session:
         ORDER BY datetime_started DESC
         LIMIT 1;
     """
-    LOG.info(fetch_session_query)
+    print(fetch_session_query)
 
     ensure_db_connection()
 
@@ -89,7 +85,7 @@ def get_session_info(device_id: str) -> Session:
         cursor.execute(fetch_session_query)
 
     session_record = cursor.fetchone()
-    LOG.info(session_record)
+    print(session_record)
 
     return Session(**session_record)
 
@@ -97,7 +93,7 @@ def get_session_info(device_id: str) -> Session:
 def extract_event_fields(event, context) -> dict[str, str, str, str]:
     decoded_event_data = base64.b64decode(event["data"]).decode("utf-8")
     data_dict = json.loads(decoded_event_data)
-    LOG.info(data_dict)
+    print(data_dict)
 
     event_id = context.event_id
     event_name = event["attributes"]["event"]
@@ -110,6 +106,7 @@ def handle_motion(event, context) -> None:
     event_fields = extract_event_fields(event, context)
     device_id = event["attributes"]["device_id"]
     session_record = get_session_info(device_id)
+    print(session_record)
     insert_event_into_table(session_record.id, *event_fields.values())
 
     # if action != "none":
