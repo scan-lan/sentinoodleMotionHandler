@@ -103,3 +103,26 @@ def get_last_action_time(session_id: int) -> Optional[datetime]:
     if not last_action_time:
         return None
     return last_action_time
+
+
+def get_message_index(session_id: int) -> int:
+    fetch_message_index = f"""
+        SELECT message_index
+        FROM session
+        WHERE id = {session_id}
+        ORDER BY datetime_started DESC
+        LIMIT 1;
+    """
+    print(fetch_message_index)
+    ensure_db_connection()
+
+    with __get_cursor() as cursor:
+        cursor.execute(fetch_message_index)
+
+    message_index = cursor.fetchone()["message_index"]
+    return 0 if not message_index and message_index != 0 else message_index
+
+
+def update_message_index(session_id: int, new_index_value: int) -> None:
+    print("remember to implement this!!")  # TODO
+    pass

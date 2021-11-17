@@ -13,8 +13,9 @@ class Session:
     medication_dosage: Optional[Decimal]
     dosage_frequency: Optional[int]
     messages: Optional[str]
-    message_wait_period_minutes: Optional[int] = 5
-    doses_taken_today: Optional[int] = 0
+    message_index: Optional[int]
+    message_wait_period_minutes: Optional[int]
+    doses_taken_today: Optional[int]
 
 
 @dataclass
