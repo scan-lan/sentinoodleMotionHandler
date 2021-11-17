@@ -15,3 +15,12 @@ class Session:
     messages: Optional[str]
     message_wait_period_minutes: Optional[int] = 5
     doses_taken_today: Optional[int] = 0
+
+
+@dataclass
+class Event:
+    id: str
+    session_id: int
+    event_name: str
+    published_at: str
+    room: Optional[str]
