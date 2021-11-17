@@ -7,9 +7,9 @@ from pymysql.err import OperationalError
 from requests import post
 
 pymysql_config = {
-    'user': 'cloud-function',
+    'user': 'cloudFunction',
     'password': '$D>rj>!rr4?w6=V^Sa^z',
-    'db': 'sentinoodle',
+    'db': 'sentinoodlev2',
     'charset': 'utf8mb4',
     'cursorclass': pymysql.cursors.DictCursor,
     'autocommit': True
@@ -34,18 +34,7 @@ def __get_cursor():
         return DB.cursor()
 
 
-def insert_event_into_table(event_id: str, device_id: str, event_name: str, date_string: str, room: str) -> None:
-    event_insert_query = f"""
-            INSERT INTO event (gc_pub_sub_id, device_id, event, published_at, room)
-            VALUES (
-                '{event_id}',
-                '{device_id}',
-                '{event_name}',
-                STR_TO_DATE('{date_string[:-1]}000', '%Y-%m-%dT%H:%i:%s.%f'),
-        """
-    event_insert_query += f"'{room}');" if room else "NULL);"
-    LOG.info(event_insert_query)
-
+def ensure_db_connection():
     global DB
 
     if not DB:
@@ -56,23 +45,37 @@ def insert_event_into_table(event_id: str, device_id: str, event_name: str, date
             pymysql_config['unix_socket'] = f'/cloudsql/{CONNECTION_NAME}'
             DB = pymysql.connect(**pymysql_config)
 
-    # Remember to close SQL resources declared while running this function.
-    # Keep any declared in global scope (e.g. mysql_conn) for later reuse.
+
+# TODO: remove device_id from method signature
+def insert_event_into_table(session_id: int, event_id: str, event_name: str, date_string: str, room: str) -> None:
+    event_insert_query = f"""
+            INSERT INTO event (gc_pub_sub_id, session_id, event, published_at, room)
+            VALUES (
+                '{event_id}',
+                {session_id},
+                '{event_name}',
+                STR_TO_DATE('{date_string[:-1]}000', '%Y-%m-%dT%H:%i:%s.%f'),
+        """
+    event_insert_query += f"'{room}');" if room else "NULL);"
+    LOG.info(event_insert_query)
+
+    ensure_db_connection()
+
+    # Remember to close SQL resources declared while running this function
     with __get_cursor() as cursor:
         cursor.execute(event_insert_query)
 
 
-def extract_event_fields(event, context) -> dict[str, str, str, str, str]:
+def extract_event_fields(event, context) -> dict[str, str, str, str]:
     decoded_event_data = base64.b64decode(event["data"]).decode("utf-8")
     data_dict = json.loads(decoded_event_data)
     LOG.info(data_dict)
 
     event_id = context.event_id
-    device_id = event["attributes"]["device_id"]
     event_name = event["attributes"]["event"]
     date_string = event["attributes"]["published_at"]
     room = data_dict["room"]
-    return {"event_id": event_id, "device_id": device_id, "event_name": event_name, "date_string": date_string, "room": room}
+    return {"event_id": event_id, "event_name": event_name, "date_string": date_string, "room": room}
 
 
 def handle_motion(event, context) -> None:
