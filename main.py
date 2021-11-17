@@ -1,10 +1,15 @@
 import base64
 import json
 import logging as LOG
+from typing import NewType
 
 import pymysql
 from pymysql.err import OperationalError
 from requests import post
+
+from schemas import Session
+
+MESSAGE_SEPARATOR = '|'  # TODO: implement this
 
 pymysql_config = {
     'user': 'cloudFunction',
@@ -14,6 +19,8 @@ pymysql_config = {
     'cursorclass': pymysql.cursors.DictCursor,
     'autocommit': True
 }
+
+# isession = NewType("Session", Session)
 
 CONNECTION_NAME = 'sentinoodle:europe-west2:sentinoodle-events'
 
@@ -66,6 +73,27 @@ def insert_event_into_table(session_id: int, event_id: str, event_name: str, dat
         cursor.execute(event_insert_query)
 
 
+def get_session_info(device_id: str) -> Session:
+    fetch_session_query = f"""
+        SELECT *
+            FROM session
+        WHERE device_id = '{device_id}'
+        ORDER BY datetime_started DESC
+        LIMIT 1;
+    """
+    LOG.info(fetch_session_query)
+
+    ensure_db_connection()
+
+    with __get_cursor() as cursor:
+        cursor.execute(fetch_session_query)
+
+    session_record = cursor.fetchone()
+    LOG.info(session_record)
+
+    return Session(**session_record)
+
+
 def extract_event_fields(event, context) -> dict[str, str, str, str]:
     decoded_event_data = base64.b64decode(event["data"]).decode("utf-8")
     data_dict = json.loads(decoded_event_data)
@@ -80,8 +108,9 @@ def extract_event_fields(event, context) -> dict[str, str, str, str]:
 
 def handle_motion(event, context) -> None:
     event_fields = extract_event_fields(event, context)
-    insert_event_into_table(*event_fields.values())
-    # session_id = get_session_id()
+    device_id = event["attributes"]["device_id"]
+    session_record = get_session_info(device_id)
+    insert_event_into_table(session_record.id, *event_fields.values())
 
     # if action != "none":
     #     url = f"https://maker.ifttt.com/trigger/{action}/with/key/pCu9XeUesIiztDzTb4jCaXdd-j_c69EgNA0Ms4WB4vZ"
