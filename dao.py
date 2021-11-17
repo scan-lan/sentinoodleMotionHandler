@@ -1,6 +1,8 @@
 import pymysql
 from pymysql.err import OperationalError
 from schemas import Session
+from datetime import datetime
+from typing import Optional
 
 pymysql_config = {
     'user': 'cloudFunction',
@@ -70,7 +72,6 @@ def get_session_info(device_id: str) -> Session:
         LIMIT 1;
     """
     print(fetch_session_query)
-
     ensure_db_connection()
 
     with __get_cursor() as cursor:
@@ -80,3 +81,25 @@ def get_session_info(device_id: str) -> Session:
     print(session_record)
 
     return Session(**session_record)
+
+
+def get_last_action_time(session_id: int) -> Optional[datetime]:
+    fetch_last_action = f"""
+        SELECT published_at
+        FROM `action` a
+            JOIN event e ON a.triggering_event_id = e.id
+        WHERE a.session_id = {session_id}
+        ORDER BY published_at DESC
+        LIMIT 1;
+    """
+    print(fetch_last_action)
+    ensure_db_connection()
+
+    with __get_cursor() as cursor:
+        cursor.execute(fetch_last_action)
+
+    last_action_time = cursor.fetchone()["published_at"]
+    print(last_action_time)
+    if not last_action_time:
+        return None
+    return last_action_time
