@@ -6,10 +6,10 @@ from random import Random
 from typing import Optional
 
 from requests import post
-from schemas import Session, Event
+from schemas import Session, Event, Action
 from dao import (
     get_session_info, insert_event_into_table, get_last_action_time,
-    get_message_index, update_message_index
+    get_message_index, update_message_index, insert_action_into_table
 )
 
 MESSAGE_SEPARATOR = '|'
@@ -65,9 +65,11 @@ def handle_motion(event, context) -> None:
     event_record = Event(**event_fields, session_id=session.id)
     insert_event_into_table(**asdict(event_record))
 
-    action = determine_action(event_record, session)
-
-    if action:
-        url = f"https://maker.ifttt.com/trigger/{action}/with/key/pCu9XeUesIiztDzTb4jCaXdd-j_c69EgNA0Ms4WB4vZ"
+    action_type = determine_action(event_record, session)
+    if action_type:
+        message = get_message_to_use(session)
+        url = f"https://maker.ifttt.com/trigger/{action_type}/with/key/pCu9XeUesIiztDzTb4jCaXdd-j_c69EgNA0Ms4WB4vZ"
         result = post(url)
         print(f"Status: {result.status_code}; Text: {result.text}")
+        action_record = Action(session.id, event_record.id, action_type, f'{{\"message\": \"{message}\"}}')
+        insert_action_into_table(**asdict(action_record))

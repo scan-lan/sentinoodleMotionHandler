@@ -46,16 +46,15 @@ def ensure_db_connection():
 
 def insert_event_into_table(id: str, session_id: int, event_name: str, published_at: str, room: str) -> None:
     event_insert_query = f"""
-            INSERT INTO event (id, session_id, event_name, published_at, room)
-            VALUES (
-                '{id}',
-                {session_id},
-                '{event_name}',
-                STR_TO_DATE('{published_at[:-1]}000', '%Y-%m-%dT%H:%i:%s.%f'),
-        """
-    event_insert_query += f"'{room}');" if room else "NULL);"
+        INSERT INTO event (id, session_id, event_name, published_at, room)
+        VALUES (
+            '{id}',
+            {session_id},
+            '{event_name}',
+            STR_TO_DATE('{published_at[:-1]}000', '%Y-%m-%dT%H:%i:%s.%f'),
+            '{room}');
+    """
     print(event_insert_query)
-
     ensure_db_connection()
 
     # Remember to close SQL resources declared while running this function
@@ -126,3 +125,20 @@ def get_message_index(session_id: int) -> int:
 def update_message_index(session_id: int, new_index_value: int) -> None:
     print("remember to implement this!!")  # TODO
     pass
+
+
+def insert_action_into_table(session_id: int, triggering_event_id: str, action_type: str, body: str):
+    action_insert_query = f"""
+        INSERT INTO `action` (session_id, triggering_event_id, `type`, body)
+        VALUES (
+            {session_id},
+            '{triggering_event_id}',
+            '{action_type}',
+            '{body}');
+    """
+    print(action_insert_query)
+    ensure_db_connection()
+
+    # Remember to close SQL resources declared while running this function
+    with __get_cursor() as cursor:
+        cursor.execute(action_insert_query)

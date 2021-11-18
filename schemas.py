@@ -25,3 +25,11 @@ class Event:
     event_name: str
     published_at: str
     room: Optional[str]
+
+
+@dataclass
+class Action:
+    session_id: int
+    triggering_event_id: str
+    action_type: str
+    body: str
