@@ -29,7 +29,6 @@ class Event:
 
 @dataclass
 class Action:
-    session_id: int
     triggering_event_id: str
     action_type: str
     body: str

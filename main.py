@@ -71,5 +71,5 @@ def handle_motion(event, context) -> None:
         url = f"https://maker.ifttt.com/trigger/{action_type}/with/key/pCu9XeUesIiztDzTb4jCaXdd-j_c69EgNA0Ms4WB4vZ"
         result = post(url)
         print(f"Status: {result.status_code}; Text: {result.text}")
-        action_record = Action(session.id, event_record.id, action_type, f'{{\"message\": \"{message}\"}}')
+        action_record = Action(event_record.id, action_type, f'{{\"message\": \"{message}\"}}')
         insert_action_into_table(**asdict(action_record))

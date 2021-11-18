@@ -84,10 +84,10 @@ def get_session_info(device_id: str) -> Session:
 
 def get_last_action_time(session_id: int) -> Optional[datetime]:
     fetch_last_action = f"""
-        SELECT published_at
-        FROM `action` a
-            JOIN event e ON a.triggering_event_id = e.id
-        WHERE a.session_id = {session_id}
+        SELECT action_taken
+        FROM `action`
+            JOIN event e ON triggering_event_id = e.id
+        WHERE session_id = {session_id}
         ORDER BY published_at DESC
         LIMIT 1;
     """
@@ -97,7 +97,7 @@ def get_last_action_time(session_id: int) -> Optional[datetime]:
     with __get_cursor() as cursor:
         cursor.execute(fetch_last_action)
 
-    last_action_time = cursor.fetchone()["published_at"]
+    last_action_time = cursor.fetchone()["action_taken"]
     print(last_action_time)
     if not last_action_time:
         return None
@@ -127,14 +127,14 @@ def update_message_index(session_id: int, new_index_value: int) -> None:
     pass
 
 
-def insert_action_into_table(session_id: int, triggering_event_id: str, action_type: str, body: str):
+def insert_action_into_table(triggering_event_id: str, action_type: str, body: str):
     action_insert_query = f"""
-        INSERT INTO `action` (session_id, triggering_event_id, `type`, body)
+        INSERT INTO `action` (triggering_event_id, `type`, body, action_taken)
         VALUES (
-            {session_id},
             '{triggering_event_id}',
             '{action_type}',
-            '{body}');
+            '{body}',
+            NOW());
     """
     print(action_insert_query)
     ensure_db_connection()
