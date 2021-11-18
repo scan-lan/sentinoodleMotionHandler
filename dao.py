@@ -123,8 +123,17 @@ def get_message_index(session_id: int) -> int:
 
 
 def update_message_index(session_id: int, new_index_value: int) -> None:
-    print("remember to implement this!!")  # TODO
-    pass
+    update_index_query = f"""
+        UPDATE session
+        SET message_index = {new_index_value}
+        WHERE id = {session_id};
+    """
+    print(update_index_query)
+    ensure_db_connection()
+
+    # Remember to close SQL resources declared while running this function
+    with __get_cursor() as cursor:
+        cursor.execute(update_index_query)
 
 
 def insert_action_into_table(triggering_event_id: str, action_type: str, body: str):

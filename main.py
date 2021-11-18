@@ -31,6 +31,7 @@ def extract_event_fields(event, event_id: str) -> dict[str, str, str, str]:
 
 def should_send_message(session_id: int, message_wait_time: int) -> bool:
     last_action_time = get_last_action_time(session_id)
+    print(last_action_time)
     if not last_action_time:
         return True
     now_minus_wait_time = datetime.now() - timedelta(minutes=message_wait_time)
@@ -50,8 +51,10 @@ def get_message_to_use(session: Session):
     messages = session.messages.split(MESSAGE_SEPARATOR)
     Random(session.datetime_started).shuffle(messages)
     message_index = get_message_index(session.id)
+    print(f"message_index: {message_index}")
     message_to_use = messages[message_index]
     new_message_index = 0 if message_index + 1 == len(messages) else message_index + 1
+    print(f"new_message_index: {new_message_index}")
     update_message_index(session.id, new_message_index)
     return message_to_use
 
