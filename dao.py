@@ -54,7 +54,6 @@ def insert_event_into_table(id: str, session_id: int, event_name: str, published
             STR_TO_DATE('{published_at[:-1]}000', '%Y-%m-%dT%H:%i:%s.%f'),
             '{room}');
     """
-    print(event_insert_query)
     ensure_db_connection()
 
     # Remember to close SQL resources declared while running this function
@@ -70,15 +69,12 @@ def get_session_info(device_id: str) -> Session:
         ORDER BY datetime_started DESC
         LIMIT 1;
     """
-    print(fetch_session_query)
     ensure_db_connection()
 
     with __get_cursor() as cursor:
         cursor.execute(fetch_session_query)
 
     session_record = cursor.fetchone()
-    print(session_record)
-
     return Session(**session_record)
 
 
@@ -91,35 +87,15 @@ def get_last_action_time(session_id: int) -> Optional[datetime]:
         ORDER BY published_at DESC
         LIMIT 1;
     """
-    print(fetch_last_action)
     ensure_db_connection()
 
     with __get_cursor() as cursor:
         cursor.execute(fetch_last_action)
 
     last_action_time = cursor.fetchone()["action_taken"]
-    print(last_action_time)
     if not last_action_time:
         return None
     return last_action_time
-
-
-def get_message_index(session_id: int) -> int:
-    fetch_message_index = f"""
-        SELECT message_index
-        FROM session
-        WHERE id = {session_id}
-        ORDER BY datetime_started DESC
-        LIMIT 1;
-    """
-    print(fetch_message_index)
-    ensure_db_connection()
-
-    with __get_cursor() as cursor:
-        cursor.execute(fetch_message_index)
-
-    message_index = cursor.fetchone()["message_index"]
-    return 0 if not message_index and message_index != 0 else message_index
 
 
 def update_message_index(session_id: int, new_index_value: int) -> None:
@@ -128,7 +104,6 @@ def update_message_index(session_id: int, new_index_value: int) -> None:
         SET message_index = {new_index_value}
         WHERE id = {session_id};
     """
-    print(update_index_query)
     ensure_db_connection()
 
     # Remember to close SQL resources declared while running this function
@@ -145,7 +120,6 @@ def insert_action_into_table(triggering_event_id: str, action_type: str, body: s
             '{body}',
             NOW());
     """
-    print(action_insert_query)
     ensure_db_connection()
 
     # Remember to close SQL resources declared while running this function
