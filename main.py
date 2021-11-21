@@ -9,7 +9,7 @@ from requests import post
 from schemas import Session, Event, Action
 from dao import (
     get_session_info, insert_event_into_table, get_last_action_time,
-    update_message_index, insert_action_into_table
+    update_message_index, insert_action_into_table, get_messages
 )
 
 MESSAGE_SEPARATOR = '|'
@@ -47,12 +47,10 @@ def determine_action(event: Event, session: Session) -> Optional[str]:
 
 
 def get_message_to_use(session: Session):
-    messages = session.messages.split(MESSAGE_SEPARATOR)
-    message_index = 0 if session.message_index is None else session.message_index
-    print(f"message_index: {message_index}")
+    messages = get_messages(session.id)
+    message_index = 0 if not session.message_index or session.message_index >= len(messages) else session.message_index
     message_to_use = messages[message_index]
-    new_message_index = 0 if message_index + 1 == len(messages) else message_index + 1
-    print(f"new_message_index: {new_message_index}")
+    new_message_index = 0 if message_index + 1 >= len(messages) else message_index + 1
     update_message_index(session.id, new_message_index)
     return message_to_use
 

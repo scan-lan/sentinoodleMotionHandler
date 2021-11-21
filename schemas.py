@@ -12,7 +12,6 @@ class Session:
     medication_name: Optional[str]
     medication_dosage: Optional[Decimal]
     dosage_frequency: Optional[int]
-    messages: Optional[str]
     message_index: Optional[int]
     message_wait_period_minutes: Optional[int]
     doses_taken_today: Optional[int]

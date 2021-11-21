@@ -2,7 +2,7 @@ import pymysql
 from pymysql.err import OperationalError
 from schemas import Session
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 pymysql_config = {
     'user': 'cloudFunction',
@@ -56,7 +56,6 @@ def insert_event_into_table(id: str, session_id: int, event_name: str, published
     """
     ensure_db_connection()
 
-    # Remember to close SQL resources declared while running this function
     with __get_cursor() as cursor:
         cursor.execute(event_insert_query)
 
@@ -98,6 +97,21 @@ def get_last_action_time(session_id: int) -> Optional[datetime]:
     return last_action_time
 
 
+def get_messages(session_id: int) -> List[str]:
+    get_messages_query = f"""
+        SELECT message_text
+        FROM message
+        WHERE session_id = {session_id};
+    """
+    ensure_db_connection()
+
+    with __get_cursor() as cursor:
+        cursor.execute(get_messages_query)
+
+    messages = [message["message_text"] for message in cursor.fetchall()]
+    return messages
+
+
 def update_message_index(session_id: int, new_index_value: int) -> None:
     update_index_query = f"""
         UPDATE session
@@ -106,7 +120,6 @@ def update_message_index(session_id: int, new_index_value: int) -> None:
     """
     ensure_db_connection()
 
-    # Remember to close SQL resources declared while running this function
     with __get_cursor() as cursor:
         cursor.execute(update_index_query)
 
@@ -122,6 +135,5 @@ def insert_action_into_table(triggering_event_id: str, action_type: str, body: s
     """
     ensure_db_connection()
 
-    # Remember to close SQL resources declared while running this function
     with __get_cursor() as cursor:
         cursor.execute(action_insert_query)
