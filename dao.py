@@ -149,6 +149,7 @@ def insert_action_into_table(triggering_event_id: str, action_type: str, body: s
             '{body}',
             NOW());
     """
+    print(action_insert_query)
     ensure_db_connection()
 
     with __get_cursor() as cursor:

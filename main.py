@@ -5,7 +5,7 @@ from dataclasses import asdict
 from typing import Optional
 
 from requests import post
-from schemas import Session, Event, Action
+from schemas import Session, Event
 from dao import (
     get_session_info, insert_event_into_table, get_last_action,
     update_message_index, insert_action_into_table, get_messages,
@@ -31,15 +31,17 @@ def extract_event_fields(event, event_id: str) -> dict[str, str, str, str]:
 
 
 def should_send_message(session_id: int, message_wait_time: int) -> bool:
-    last_action_time = get_last_action(session_id).action_taken
-    if not last_action_time:
+    try:
+        last_action_time = get_last_action(session_id).action_taken
+    except AttributeError:
         return True
-    now_minus_wait_time = datetime.now() - timedelta(minutes=message_wait_time)
-    return now_minus_wait_time > last_action_time
+    else:
+        now_minus_wait_time = datetime.now() - timedelta(minutes=message_wait_time)
+        return now_minus_wait_time > last_action_time
 
 
 def have_eaten_today(session_id: int):
-    return EATEN not in [event.event_name for event in get_events_today(session_id)]
+    return EATEN in [event.event_name for event in get_events_today(session_id)]
 
 
 def determine_action(event: Event, session: Session) -> Optional[str]:
@@ -84,12 +86,12 @@ def handle_motion(event, context) -> None:
             perform_action(action_type)
             action_record = {"triggering_event_id": event_record.id,
                              "action_type": action_type,
-                             "body": json.dumps({"body": action_type})}
+                             "body": action_type}
             insert_action_into_table(**action_record)
         else:
             message_dict = get_message_to_use(session)
             perform_action(action_type, message_dict)
             action_record = {"triggering_event_id": event_record.id,
                              "action_type": action_type,
-                             "body": json.dumps({"body": message_dict["message"]})}
+                             "body": message_dict["message"]}
             insert_action_into_table(**action_record)
