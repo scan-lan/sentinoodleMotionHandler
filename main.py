@@ -2,21 +2,22 @@ import base64
 from datetime import datetime, timedelta
 import json
 from dataclasses import asdict
-from random import Random
 from typing import Optional
 
 from requests import post
 from schemas import Session, Event, Action
 from dao import (
-    get_session_info, insert_event_into_table, get_last_action_time,
-    update_message_index, insert_action_into_table, get_messages
+    get_session_info, insert_event_into_table, get_last_action,
+    update_message_index, insert_action_into_table, get_messages,
+    get_events_today
 )
 
-MESSAGE_SEPARATOR = '|'
 BEDROOM = "bedroom"
 KITCHEN = "kitchen"
 GIVE_AFFIRMATION = "give_affirmation"
 MEDICATION_REMINDER = "medication_reminder"
+EAT_REMINDER = "eat_reminder"
+EATEN = "eaten"
 
 
 def extract_event_fields(event, event_id: str) -> dict[str, str, str, str]:
@@ -30,11 +31,15 @@ def extract_event_fields(event, event_id: str) -> dict[str, str, str, str]:
 
 
 def should_send_message(session_id: int, message_wait_time: int) -> bool:
-    last_action_time = get_last_action_time(session_id)
+    last_action_time = get_last_action(session_id).action_taken
     if not last_action_time:
         return True
     now_minus_wait_time = datetime.now() - timedelta(minutes=message_wait_time)
     return now_minus_wait_time > last_action_time
+
+
+def have_eaten_today(session_id: int):
+    return EATEN not in [event.event_name for event in get_events_today(session_id)]
 
 
 def determine_action(event: Event, session: Session) -> Optional[str]:
@@ -42,17 +47,27 @@ def determine_action(event: Event, session: Session) -> Optional[str]:
         if event.room == BEDROOM:
             return GIVE_AFFIRMATION
         elif event.room == KITCHEN:
-            return MEDICATION_REMINDER
+            if not have_eaten_today(session.id):
+                return EAT_REMINDER
+            else:
+                return MEDICATION_REMINDER
     return None
 
 
 def get_message_to_use(session: Session):
     messages = get_messages(session.id)
     message_index = 0 if not session.message_index or session.message_index >= len(messages) else session.message_index
-    message_to_use = messages[message_index]
+    message_dict = {"index": message_index, "message": messages[message_index]}
     new_message_index = 0 if message_index + 1 >= len(messages) else message_index + 1
     update_message_index(session.id, new_message_index)
-    return message_to_use
+    return message_dict
+
+
+def perform_action(action_type: str, message_dict=None):
+    url_trigger_name = f"{GIVE_AFFIRMATION}{message_dict['index']}" if action_type == GIVE_AFFIRMATION else action_type
+    url = f"https://maker.ifttt.com/trigger/{url_trigger_name}/with/key/pCu9XeUesIiztDzTb4jCaXdd-j_c69EgNA0Ms4WB4vZ"
+    result = post(url)
+    print(f"Status: {result.status_code}; Text: {result.text}")
 
 
 def handle_motion(event, context) -> None:
@@ -65,9 +80,16 @@ def handle_motion(event, context) -> None:
 
     action_type = determine_action(event_record, session)
     if action_type:
-        message = get_message_to_use(session)
-        url = f"https://maker.ifttt.com/trigger/{action_type}/with/key/pCu9XeUesIiztDzTb4jCaXdd-j_c69EgNA0Ms4WB4vZ"
-        result = post(url)
-        print(f"Status: {result.status_code}; Text: {result.text}")
-        action_record = Action(event_record.id, action_type, f'{{\"message\": \"{message}\"}}')
-        insert_action_into_table(**asdict(action_record))
+        if action_type != GIVE_AFFIRMATION:
+            perform_action(action_type)
+            action_record = {"triggering_event_id": event_record.id,
+                             "action_type": action_type,
+                             "body": json.dumps({"body": action_type})}
+            insert_action_into_table(**action_record)
+        else:
+            message_dict = get_message_to_use(session)
+            perform_action(action_type, message_dict)
+            action_record = {"triggering_event_id": event_record.id,
+                             "action_type": action_type,
+                             "body": json.dumps({"body": message_dict["message"]})}
+            insert_action_into_table(**action_record)

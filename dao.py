@@ -1,6 +1,6 @@
 import pymysql
 from pymysql.err import OperationalError
-from schemas import Session
+from schemas import Session, Action, Event
 from datetime import datetime
 from typing import Optional, List
 
@@ -63,7 +63,7 @@ def insert_event_into_table(id: str, session_id: int, event_name: str, published
 def get_session_info(device_id: str) -> Session:
     fetch_session_query = f"""
         SELECT *
-            FROM session
+        FROM session
         WHERE device_id = '{device_id}'
         ORDER BY datetime_started DESC
         LIMIT 1;
@@ -77,9 +77,9 @@ def get_session_info(device_id: str) -> Session:
     return Session(**session_record)
 
 
-def get_last_action_time(session_id: int) -> Optional[datetime]:
+def get_last_action(session_id: int) -> Optional[Action]:
     fetch_last_action = f"""
-        SELECT action_taken
+        SELECT *
         FROM `action`
             JOIN event e ON triggering_event_id = e.id
         WHERE session_id = {session_id}
@@ -91,10 +91,26 @@ def get_last_action_time(session_id: int) -> Optional[datetime]:
     with __get_cursor() as cursor:
         cursor.execute(fetch_last_action)
 
-    last_action_time = cursor.fetchone()["action_taken"]
-    if not last_action_time:
+    try:
+        last_action = Action(**cursor.fetchone())
+    except:
         return None
-    return last_action_time
+    return last_action
+
+
+def get_events_today(session_id: int) -> List[Event]:
+    fetch_events_today = f"""
+        SELECT *
+        FROM event
+        WHERE session_id = {session_id}
+            AND DATE(published_at) = CURRENT_DATE();
+    """
+    ensure_db_connection()
+
+    with __get_cursor() as cursor:
+        cursor.execute(fetch_events_today)
+
+    return [Event(**event) for event in cursor.fetchall()]
 
 
 def get_messages(session_id: int) -> List[str]:

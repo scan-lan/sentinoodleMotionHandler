@@ -8,13 +8,10 @@ from decimal import Decimal
 class Session:
     id: int
     device_id: str
+    medication_id: int
     datetime_started: datetime
-    medication_name: Optional[str]
-    medication_dosage: Optional[Decimal]
-    dosage_frequency: Optional[int]
     message_index: Optional[int]
     message_wait_period_minutes: Optional[int]
-    doses_taken_today: Optional[int]
 
 
 @dataclass
@@ -28,6 +25,8 @@ class Event:
 
 @dataclass
 class Action:
+    id: int
     triggering_event_id: str
     action_type: str
     body: str
+    action_taken: datetime
