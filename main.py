@@ -37,6 +37,7 @@ def should_send_message(session_id: int, message_wait_time: int) -> bool:
         return True
     else:
         now_minus_wait_time = datetime.now() - timedelta(minutes=message_wait_time)
+        print(now_minus_wait_time.isoformat())
         return now_minus_wait_time > last_action_time
 
 
@@ -81,7 +82,7 @@ def handle_motion(event, context) -> None:
     insert_event_into_table(**asdict(event_record))
 
     action_type = determine_action(event_record, session)
-    if action_type:
+    if action_type is not None:
         if action_type != GIVE_AFFIRMATION:
             perform_action(action_type)
             action_record = {"triggering_event_id": event_record.id,

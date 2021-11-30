@@ -79,8 +79,8 @@ def get_session_info(device_id: str) -> Session:
 
 def get_last_action(session_id: int) -> Optional[Action]:
     fetch_last_action = f"""
-        SELECT *
-        FROM `action`
+        SELECT a.id, triggering_event_id, `type` AS action_type, body, action_taken
+        FROM `action` a
             JOIN event e ON triggering_event_id = e.id
         WHERE session_id = {session_id}
         ORDER BY published_at DESC
@@ -91,11 +91,11 @@ def get_last_action(session_id: int) -> Optional[Action]:
     with __get_cursor() as cursor:
         cursor.execute(fetch_last_action)
 
-    try:
-        last_action = Action(**cursor.fetchone())
-    except:
+    action = cursor.fetchone()
+    if action is None:
         return None
-    return last_action
+    else:
+        return Action(**action)
 
 
 def get_events_today(session_id: int) -> List[Event]:
@@ -149,7 +149,6 @@ def insert_action_into_table(triggering_event_id: str, action_type: str, body: s
             '{body}',
             NOW());
     """
-    print(action_insert_query)
     ensure_db_connection()
 
     with __get_cursor() as cursor:
